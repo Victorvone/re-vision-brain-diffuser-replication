@@ -1,0 +1,52 @@
+Natural scene reconstruction from fMRI signals using generative latent diffusion
+DOI link to the original study
+[Word limit ~1,300 words]
+1. Information about the authors of the replication (1-3 people):
+Names of the replicators.
+Institutions of the replicators.
+E-mail addresses of the replicators.
+fMRI experience: Years of experience with fMRI analysis.
+Big data experience: Have you worked with large public datasets (e.g. NSD) before?
+Research experience: How familiar are you with the topic/area of research of this study?
+ “Very familiar”, “familiar”, “somewhat familiar”, “not familiar”
+Methodological experience: How familiar are you with the analysis methods used?
+“Very familiar”, “familiar”, “somewhat familiar”, “not familiar”
+2. Authors of the original study (just copy from the paper):
+Names of the original authors of the study.
+3. How would you categorize the scientific subfield of this study:
+“Brain–model alignment”, “Cortical organization”, “Object representations”, “Scene representations”, “Feature selectivity”, “Representational geometry”, “Encoding models”, “Decoding/Reconstruction”, “Stimulus optimization”, “Cross-subject”, or something else (you can choose multiple).
+4. Dataset / data used in the original study (specify if only a subset was used):
+Dataset: Which dataset set was used in the study (e.g. NSD, THINGS, BOLD5000, private)?
+Preprocessing: Which preprocessed version of the dataset was used?
+Analysis space: Was the analysis performed in native subject space or a standardized space?
+Participants: How many participants were used from the dataset?
+Images: Which subset of images was used (e.g. only shared images, only images of food)?
+ROIs: Which ROIs were used (e.g. occipitotemporal cortex (OTC) or whole brain)?
+Metadata: Which metadata was used (e.g. image captions, DNN embeddings, similarity ratings)?
+5. Context of the study:
+Give a brief context / background of the study and its significance in your own words.
+This is meant for the reviewers to have an easier time placing the study and the findings you will try to replicate.
+6. Main findings of the original study:
+List each central result of the study that you intend to replicate. Focus on the results mentioned in the abstract of the paper (or implied by the abstract’s content).
+Please indicate which figure panels are related to each finding.
+7. How were each of these findings generated (method and outcome measure):
+For each of the results listed above, briefly explain which method, outcome measure (e.g. pearson correlation), and statistical test were used to generate that finding.
+Please indicate the result of each finding in terms of the significance value and effect size (if reported in the paper), or qualitative assessment in the case of qualitative results.
+8. How to replicate these results:
+Outline how you intend to replicate each result using LAION-fMRI.
+Is there new metadata that has to be generated for the replication (e.g. DNN embeddings, luminosity ratings etc.)?
+Is there any necessary metadata that can be approximated using DNNs (e.g. behavioural ratings).
+Are there main results in the study that you cannot replicate using LAION-fMRI?
+9. Statistics:
+Explain the relevant statistical tests used in the original study.
+Since LAION-fMRI only has 5 subjects all statistics have to be done within-subject, not at the group level!
+If the study already uses within-subjects statistics, use their statistical approach.
+If the study uses group-level statistics, please change it to permutation-based single-subject statistics. More information, including a tutorial, can be found on our website.
+Please indicate for each finding if the statistics of the original study had to be changed in meaningful ways. If you run permutation, please indicate across which parameters you intend to run the permutation. Please consult the tutorial for details.
+Please reach out to us if you are unsure or think that a permutation approach is not applicable to the finding(s) you are replicating.
+10. How to test generalization of these findings (required only for generalization):
+If you want to also conduct the generalization, please use method 1 and method 2 that are explained in our generalization guide. Additionally you can use method 3, which involves using a subset of the OOD images included in LAION-fMRI. If you are not doing generalization, you do not need to fill this in and can leave it empty.
+If testing the generalization of all findings listed above is too time-consuming or computationally intense, you can limit it to the main finding. If that is the case, please state so here and explain.
+Please indicate briefly how you would use methods 1 & 2 (and method 3) to test the generalizability of the finding(s).
+If you use method 3 (the OOD images), please indicate which subset of OOD images you are using.
+These three methods may not apply to findings that only use a subset of the images (i.e. only images of food).
