@@ -50,33 +50,33 @@ cfgm_name = 'vd_noema'
 sampler_cls = DDIMSampler_VD
 pth = 'versatile_diffusion/pretrained/vd-four-flow-v1-0-fp16-deprecated.pth'
 cfgm = model_cfg_bank()(cfgm_name)
-net = get_model()(cfgm)
-print('Model instantiated from config OK (this triggers the CLIP download)')
 
-# get_model() builds the 3.3B-param model in fp32 (~13.3GB) by default. This machine
-# is a single 16GB-unified-memory APU (no swap), not the two 12GB discrete GPUs the
-# original code assumes, so fp32 net + fp16 checkpoint together reliably OOM. Cast to
-# fp16 (the checkpoint's native dtype, see filename) before loading, and mmap the
-# checkpoint so its 6.3GB isn't fully materialized in RAM at once.
+# get_model() builds the 3.3B-param model in fp32 by default. On this machine (16GB
+# cgroup-capped unified memory, no swap) that alone peaks CPU RAM at ~17GB -- already
+# over budget before any checkpoint or .half() cast gets a chance to run. GPU device
+# memory is NOT charged against the cgroup limit here (verified: a direct 20GB cuda
+# allocation left cgroup memory.current unchanged), so the fix is to never materialize
+# the model in CPU RAM at all: build it directly on cuda via the torch.device context
+# manager. This requires accelerate (for transformers' CLIPModel.from_pretrained to
+# honor the device context) and a one-line patch in diffusion_utils.make_beta_schedule
+# (forces that specific ~1000-element schedule computation onto CPU regardless of the
+# ambient device context, since it needs a real .numpy() call internally).
+with torch.device(DEVICE):
+    net = get_model()(cfgm)
+print('Model instantiated directly on GPU OK (this triggers the CLIP download)')
+
 net.half()
-print('net.half() OK (pre-checkpoint cast to fp16 to keep peak RAM down)')
+print('net.half() OK (fp32->fp16 cast, in place on GPU)')
 
 print('Loading main VD checkpoint (critical test: old .pth checkpoint under new torch)...')
-try:
-    sd = torch.load(pth, map_location='cpu', mmap=True)
-except (RuntimeError, ValueError):
-    print('mmap=True load failed (likely a legacy non-mmap-able checkpoint format), falling back')
-    sd = torch.load(pth, map_location='cpu')
+sd = torch.load(pth, map_location=DEVICE)
 missing, unexpected = net.load_state_dict(sd, strict=False)
 del sd
 import gc
 gc.collect()
+torch.cuda.empty_cache()
 print(f'load_state_dict OK — missing={len(missing)} unexpected={len(unexpected)}')
 
-# Single-GPU consolidation: everything on cuda:0 instead of the original cuda(0)/cuda(1) split
-net.clip.to(DEVICE)
-net.autokl.to(DEVICE)
-net.model.to(DEVICE)
 sampler = sampler_cls(net)
 batch_size = 1
 

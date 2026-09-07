@@ -29,13 +29,18 @@ This machine ("victor1") is an **LXC container**, hard-capped to exactly **16GiB
 threads** by a cgroup limit at the container root - confirmed by walking the full cgroup
 hierarchy (`cat /sys/fs/cgroup/memory.max`). The underlying host chip (AMD Ryzen AI Max+ 395,
 Radeon 8060S, unified memory) is far more capable - `rocminfo` reports ~96GB + ~32GB
-GPU-accessible memory pools - but none of that is usable from inside this container as things
-stand. Since it's a unified-memory architecture, the 16GB cap is also the effective GPU-memory
-ceiling, regardless of what `rocminfo`/`rocm-smi` report.
+GPU-accessible memory pools.
 
-A request to raise this allocation was handed to the VM's administrator on 2026-09-07 but was
-not confirmed resolved as of that date. **Check `docs/replication-technical-requirements.md` §0
-update for the current state before assuming more than 16GB is available.**
+**Correction (2026-09-07, verified by direct test): the 16GiB cgroup cap does NOT gate GPU
+device memory.** A direct `torch.cuda`/hipMalloc allocation of 20GB left `/sys/fs/cgroup/memory.current`
+unchanged while `torch.cuda.memory_allocated()` showed the full 20GB - the ~96GB GPU pool is
+device memory managed by the amdgpu driver, charged separately from the cgroup. The cap only
+bites host-RAM-resident (CPU-side) allocations. This means the admin's earlier assessment was
+correct and no cluster-side change was needed for the Versatile Diffusion OOM (see "Known fix"
+below) - the practical implication is: **build and load models directly onto the GPU device**
+(`with torch.device('cuda:0'):` around construction, `torch.load(..., map_location='cuda:0')`
+for checkpoints) rather than materializing them in CPU RAM first, since CPU RAM is still hard-capped
+at 16GiB with no swap.
 
 There is **no swap**, so an OOM kill is immediate and silent, not a gradual slowdown you can
 react to. Two consequences:
@@ -49,13 +54,38 @@ react to. Two consequences:
 
 ## Known fix: Versatile Diffusion OOM on load
 
-`get_model()(cfgm)` instantiates the 3.3B-param Versatile Diffusion model in **fp32 by default**
-(~13.3GB) before any checkpoint is loaded - on this machine that alone nearly exhausts the
-16GB budget. Fix: cast to fp16 immediately after instantiation, before `torch.load`/
-`load_state_dict`, and load the checkpoint with `mmap=True`. Working example in
-`working_repo/scripts/smoke_test_versatile_diffusion.py`. This fix has **not yet** been ported
-into the real `versatilediffusion_reconstruct_images.py` or `roi_versatilediffusion_reconstruct.py`
-- do that before running either for real.
+`get_model()(cfgm)` instantiates the 3.3B-param Versatile Diffusion model in **fp32 on CPU by
+default** (~17GB peak cgroup RAM measured directly, worse than the ~13.3GB originally estimated)
+- on this machine that alone exceeds the 16GB cgroup budget before any checkpoint is even
+loaded, and no CPU-side workaround (fp16 cast, mmap) gets a turn early enough to prevent it. The
+earlier "known fix" (cast to fp16 + mmap after CPU instantiation) reduced but didn't eliminate
+the risk - it still peaked at ~16.3GB in testing, uncomfortably close to the cap.
+
+**Real fix (2026-09-07): never materialize the model in CPU RAM at all.** Build it directly on
+the GPU, since GPU device memory isn't charged to the cgroup (see "Compute environment" above):
+```python
+with torch.device('cuda:0'):
+    net = get_model()(cfgm)
+net.half()
+sd = torch.load(pth, map_location='cuda:0')
+net.load_state_dict(sd, strict=False)
+```
+This requires two things beyond the snippet above:
+1. `accelerate` installed in `ml-env` (`pip install accelerate`) - transformers'
+   `CLIPModel.from_pretrained`, called internally during construction, otherwise refuses to run
+   under an ambient `torch.device` context.
+2. A one-line patch already applied in `working_repo/versatile_diffusion/lib/model_zoo/diffusion_utils.py`'s
+   `make_beta_schedule` - it forces its tiny (~1000-element) internal computation onto CPU
+   regardless of the ambient device context, since it needs a real `.numpy()` call that a CUDA
+   tensor can't service directly. Without this patch, construction under `torch.device('cuda:0')`
+   crashes here first.
+
+Peak cgroup RAM with this approach: ~13.6GB, flat throughout construction, `.half()`, and
+checkpoint load (measured directly) - versus ~17GB (over budget) for plain fp32 construction and
+~16.3GB for the old fp16+mmap-on-CPU approach. This is now the pattern used in
+`working_repo/scripts/smoke_test_versatile_diffusion.py`, `versatilediffusion_reconstruct_images.py`,
+and `roi_versatilediffusion_reconstruct.py` - all three ported and the smoke test verified
+end-to-end (real checkpoint load + full DDIM sampling pass).
 
 ## Where things live
 

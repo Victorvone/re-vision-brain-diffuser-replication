@@ -54,30 +54,39 @@ def regularize_image(x):
             'Wrong image size'
         return x
 
+DEVICE = 'cuda:0'
+
 cfgm_name = 'vd_noema'
 sampler = DDIMSampler_VD
 pth = 'versatile_diffusion/pretrained/vd-four-flow-v1-0-fp16-deprecated.pth'
 cfgm = model_cfg_bank()(cfgm_name)
-net = get_model()(cfgm)
-sd = torch.load(pth, map_location='cpu')
-net.load_state_dict(sd, strict=False)    
 
+# get_model() builds the 3.3B-param model in fp32 by default. On this machine (16GB
+# cgroup-capped unified memory, no swap) that alone peaks CPU RAM at ~17GB -- already
+# over budget before any checkpoint or .half() cast gets a chance to run. GPU device
+# memory is NOT charged against the cgroup limit here, so the fix is to never
+# materialize the model in CPU RAM at all: build it directly on cuda via the
+# torch.device context manager (requires the `accelerate` package so transformers'
+# CLIPModel.from_pretrained honors the device context, and the CPU-forced fix in
+# diffusion_utils.make_beta_schedule for its internal .numpy() call). See
+# scripts/smoke_test_versatile_diffusion.py, which validates this end-to-end.
+with torch.device(DEVICE):
+    net = get_model()(cfgm)
+net.half()
+sd = torch.load(pth, map_location=DEVICE)
+net.load_state_dict(sd, strict=False)
+del sd
 
-# Might require editing the GPU assignments due to Memory issues
-net.clip.cuda(0)
-net.autokl.cuda(0)
-
-#net.model.cuda(1)
+# Single-GPU consolidation: this machine has one GPU, not the two 12GB discrete GPUs
+# the original code assumes (cuda(0)/cuda(1) split) -- everything lives on DEVICE.
 sampler = sampler(net)
-#sampler.model.model.cuda(1)
-#sampler.model.cuda(1)
 batch_size = 1
 
 pred_text = np.load('data/predicted_features/subj{:02d}/nsd_cliptext_roi_nsdgeneral.npy'.format(sub))
-pred_text = torch.tensor(pred_text).half().cuda(1)
+pred_text = torch.tensor(pred_text).half().to(DEVICE)
 
 pred_vision = np.load('data/predicted_features/subj{:02d}/nsd_clipvision_roi_nsdgeneral.npy'.format(sub))
-pred_vision = torch.tensor(pred_vision).half().cuda(1)
+pred_vision = torch.tensor(pred_vision).half().to(DEVICE)
 
 
 n_samples = 1
@@ -86,7 +95,6 @@ ddim_eta = 0
 scale = 7.5
 xtype = 'image'
 ctype = 'prompt'
-net.autokl.half()
 
 res_dir = 'results/versatile_diffusion/subj{:02d}/roi/'.format(sub)
 if not os.path.exists(res_dir):
@@ -96,56 +104,50 @@ torch.manual_seed(0)
 for im_id in range(len(pred_vision)):
 
     zim = Image.open('results/vdvae/subj{:02d}/roi/{}.png'.format(sub,im_id))
-   
+
     zim = regularize_image(zim)
     zin = zim*2 - 1
-    zin = zin.unsqueeze(0).cuda(0).half()
+    zin = zin.unsqueeze(0).to(DEVICE).half()
 
     init_latent = net.autokl_encode(zin)
-    
+
     sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=ddim_eta, verbose=False)
     #strength=0.75
     assert 0. <= strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(strength * ddim_steps)
-    device = 'cuda:0'
-    z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]).to(device))
-    #z_enc,_ = sampler.encode(init_latent.cuda(1).half(), c.cuda(1).half(), torch.tensor([t_enc]).to(sampler.model.model.diffusion_model.device))
+    z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]).to(DEVICE))
 
     dummy = ''
     utx = net.clip_encode_text(dummy)
-    utx = utx.cuda(1).half()
-    
-    dummy = torch.zeros((1,3,224,224)).cuda(0)
+    utx = utx.to(DEVICE).half()
+
+    dummy = torch.zeros((1,3,224,224)).to(DEVICE)
     uim = net.clip_encode_vision(dummy)
-    uim = uim.cuda(1).half()
-    
-    z_enc = z_enc.cuda(1)
+    uim = uim.to(DEVICE).half()
+
+    z_enc = z_enc.to(DEVICE)
 
     h, w = 512,512
     shape = [n_samples, 4, h//8, w//8]
 
     cim = pred_vision[im_id].unsqueeze(0)
     ctx = pred_text[im_id].unsqueeze(0)
-    
-    #c[:,0] = u[:,0]
-    #z_enc = z_enc.cuda(1).half()
-    
-    sampler.model.model.diffusion_model.device='cuda:1'
-    sampler.model.model.diffusion_model.half().cuda(1)
-    #mixing = 0.4
-    
+
+    sampler.model.model.diffusion_model.device = DEVICE
+    sampler.model.model.diffusion_model.half().to(DEVICE)
+
     z = sampler.decode_dc(
         x_latent=z_enc,
         first_conditioning=[uim, cim],
         second_conditioning=[utx, ctx],
         t_start=t_enc,
         unconditional_guidance_scale=scale,
-        xtype='image', 
+        xtype='image',
         first_ctype='vision',
         second_ctype='prompt',
         mixed_ratio=(1-mixing), )
-    
-    z = z.cuda(0).half()
+
+    z = z.to(DEVICE).half()
     x = net.autokl_decode(z)
     color_adj='None'
     #color_adj_to = cin[0]
