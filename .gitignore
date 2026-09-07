@@ -1,6 +1,2 @@
-# original_repo is kept as an untouched reference copy, tracked separately (not
-# modified, so not folded into this repo).
-original_repo/
-
 # local Claude Code session state, not project content
 .claude/
