@@ -53,9 +53,24 @@ cfgm = model_cfg_bank()(cfgm_name)
 net = get_model()(cfgm)
 print('Model instantiated from config OK (this triggers the CLIP download)')
 
+# get_model() builds the 3.3B-param model in fp32 (~13.3GB) by default. This machine
+# is a single 16GB-unified-memory APU (no swap), not the two 12GB discrete GPUs the
+# original code assumes, so fp32 net + fp16 checkpoint together reliably OOM. Cast to
+# fp16 (the checkpoint's native dtype, see filename) before loading, and mmap the
+# checkpoint so its 6.3GB isn't fully materialized in RAM at once.
+net.half()
+print('net.half() OK (pre-checkpoint cast to fp16 to keep peak RAM down)')
+
 print('Loading main VD checkpoint (critical test: old .pth checkpoint under new torch)...')
-sd = torch.load(pth, map_location='cpu')
+try:
+    sd = torch.load(pth, map_location='cpu', mmap=True)
+except (RuntimeError, ValueError):
+    print('mmap=True load failed (likely a legacy non-mmap-able checkpoint format), falling back')
+    sd = torch.load(pth, map_location='cpu')
 missing, unexpected = net.load_state_dict(sd, strict=False)
+del sd
+import gc
+gc.collect()
 print(f'load_state_dict OK — missing={len(missing)} unexpected={len(unexpected)}')
 
 # Single-GPU consolidation: everything on cuda:0 instead of the original cuda(0)/cuda(1) split
