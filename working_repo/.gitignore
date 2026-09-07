@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# large pretrained checkpoints, re-downloadable, too big for GitHub (>100MB limit)
+vdvae/model/
+versatile_diffusion/pretrained/

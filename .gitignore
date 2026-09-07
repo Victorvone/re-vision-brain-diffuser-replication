@@ -1,8 +1,6 @@
-# original_repo and working_repo are their own separately-tracked git repositories
-# (working_repo has its own git history, cloned from original_repo). Not nested here
-# to avoid submodule/gitlink confusion; each is tracked independently.
+# original_repo is kept as an untouched reference copy, tracked separately (not
+# modified, so not folded into this repo).
 original_repo/
-working_repo/
 
 # local Claude Code session state, not project content
 .claude/
