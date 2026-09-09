@@ -1,14 +1,18 @@
-# re:vision Proposal (draft): Natural scene reconstruction from fMRI signals using generative latent diffusion
+# re:vision Proposal: Natural scene reconstruction from fMRI signals using generative latent diffusion
 
 DOI: https://doi.org/10.1038/s41598-023-42891-8
 Original authors: Furkan Ozcelik, Rufin VanRullen (2023), *Scientific Reports* 13:15666
-Word limit ~1,300 words (template requirement: trim once all sections are drafted)
+Word limit ~1,300 words
 
-Status: **DRAFT, being filled in section by section, together, in conversation.** Each section keeps the original template prompt verbatim (from `re-vision-proposal-template-brain-diffuser-prefilled.txt`) followed by our verified answer. Grounding: §2/§6/§7 from `ozcelik-vanrullen-2023-brain-diffuser-paper-fulltext.txt`; §4/§8/§9/§10 from `replication-technical-requirements.md`; §1 from the user directly; §3/§5 collaborative.
+Status: **Reviewed version (2026-09-09)**, as approved by Victor and his professor. Answer text below is
+verbatim from that review; only the markdown scaffolding (section headers, blockquoted template prompts,
+list markers) is repo formatting. Do not alter answer wording without an explicit instruction.
+Each section keeps the original template prompt verbatim (from
+`re-vision-proposal-template-brain-diffuser-prefilled.txt`) followed by the answer.
 
 ---
 
-## 1. Information about the authors of the replication (1–3 people)
+## 1. Information about the authors of the replication (1-3 people)
 
 > Names of the replicators.
 > Institutions of the replicators.
@@ -36,7 +40,7 @@ Status: **DRAFT, being filled in section by section, together, in conversation.*
   - Methodological experience: Somewhat familiar
 - **Adrien Doerig**
   - Institution: Freie Universität Berlin
-  - E-mail: adrien.doerig@gmail.com
+  - E-mail: adrien.doerig@fu-berlin.de
   - fMRI experience: 10+ years
   - Big data experience: Yes
   - Research experience: Very familiar
@@ -72,11 +76,11 @@ Decoding/Reconstruction
 **Answer:**
 
 - **Dataset:** Natural Scenes Dataset (NSD); participants viewed natural images drawn from MS-COCO.
-- **Preprocessing:** NSD's provided single-trial GLM beta weights, computed with fitted HRF plus GLMdenoise and ridge-regression denoising (`betas_fithrf_GLMdenoise_RR`).
+- **Preprocessing:** NSD's provided single-trial GLM beta weights, computed with fitted HRF plus GLMdenoise and ridge-regression denoising.
 - **Analysis space:** Native subject space (functional, 1.8mm resolution).
 - **Participants:** 4 of NSD's 8 subjects (sub1, sub2, sub5, sub7), who completed all scanning sessions.
 - **Images:** The training set contained 8,859 images and 24,980 fMRI trials (up to 3 repetitions for each image), and the test set contained 982 images and 2,770 fMRI trials. fMRI trials were averaged for images with multiple repetitions. Test images are common for all subjects, while training images are different.
-- **ROIs:** The NSDGeneral mask (1.8mm), a broad visual-cortex ROI spanning early through higher visual areas, not restricted to a single region like OTC. (A secondary analysis, "ROI-optimal stimuli," additionally probes finer-grained ROIs; see Finding 3 in §6.)
+- **ROIs:** The NSDGeneral mask (1.8mm), a broad visual-cortex ROI spanning early through higher visual areas, not restricted to a single region. A secondary analysis, "ROI-optimal stimuli," additionally probes visual-field ROIs V1-V4, functional localizer ROIs for faces/words/places/bodies, and eccentricity bands (see Finding 5 in 6.).
 - **Metadata:** COCO captions per image, used for CLIP-Text conditioning (5 per image, embeddings averaged).
 
 ## 5. Context of the study
@@ -95,9 +99,12 @@ Neural decoding research aims to reconstruct what a person perceived from their 
 
 **Answer:**
 
-1. **Joint low-level and high-level reconstruction of complex natural scenes.** Brain-Diffuser reconstructs both low-level properties (layout, shape) and high-level semantic content together for complex scenes, where prior methods typically captured only one or the other. (Fig. 3: example reconstructions; Figs. 1-2: the two-stage pipeline producing them.)
-2. **Strong quantitative reconstruction quality on the NSD benchmark.** Brain-Diffuser achieves strong scores on both low-level and high-level image-quality metrics (PixCorr, SSIM, and 2-way identification accuracy across six feature spaces: AlexNet(2), AlexNet(5), Inception, CLIP, EffNet-B, SwAV) on the shared NSD test set. (Table 1: quantitative metrics.) Note: the original paper frames this comparatively, as outperforming three prior reconstruction methods (Lin et al., Takagi et al., Gu et al.; Figs. 5-6); we cannot access those models' outputs for LAION-fMRI, so we replicate Brain-Diffuser's own absolute metrics instead (see §8).
-3. **ROI-optimal stimuli consistent with known functional selectivity.** When the trained model is applied to synthetic fMRI patterns that activate specific regions-of-interest (visual-field ROIs V1-V4, functional localizer ROIs for faces/words/places/bodies, and eccentricity bands), the resulting reconstructions show scene content consistent with each ROI's known neuroscientific selectivity. (Fig. 9: individual ROIs; Fig. 10: ROI combinations; Fig. 11: eccentricity bands.)
+1. **Joint low-level and high-level reconstruction of complex natural scenes.** Brain-Diffuser reconstructs both low-level properties (layout, shape) and high-level semantic content together for complex scenes. (Fig. 3: example reconstructions; Figs. 1-2: the two-stage model producing them.)
+2. **Strong quantitative reconstruction quality on the NSD benchmark.** Brain-Diffuser achieves strong scores on both low-level and high-level image-quality metrics (PixCorr, SSIM, and 2-way identification accuracy across six feature spaces: AlexNet(2), AlexNet(5), Inception, CLIP, EffNet-B, SwAV) on the shared NSD test set. (Table 1: quantitative metrics.)
+   Note: the original paper frames this comparatively, as outperforming three prior reconstruction methods (Lin et al., Takagi et al., Gu et al.; Figs. 5-6); we cannot access those models' outputs for LAION-fMRI, so we replicate Brain-Diffuser's own absolute metrics instead (see 8.).
+3. **Component contributions established by ablation.** Each component of the two-stage model contributes distinctly, and the full model is the best joint compromise: Only-VDVAE (stage 1 alone) is best on all low-level measures but worst by a large margin on all high-level ones; Brain-Diffuser without VDVAE (stage 2 alone) shows the inverse pattern; removing CLIP-Text or CLIP-Vision degrades performance relative to the full model. (Table 2: quantitative comparison; Fig. 7: qualitative examples.)
+4. **Division of labour across brain regions.** An ROI analysis of the regression weights shows that early visual regions (V1-V4) are more informative about the VDVAE features, while category-selective higher regions (Face, Word, Place, Body) carry more information about the CLIP features; the CLIP-Vision versus VDVAE difference runs in the same direction as the CLIP-Text versus VDVAE difference, but is much weaker. (Fig. 8.)
+5. **ROI-optimal stimuli consistent with known functional selectivity.** When the trained model is applied to synthetic fMRI patterns that activate specific regions-of-interest (visual-field ROIs V1-V4, functional localizer ROIs for faces/words/places/bodies, and eccentricity bands), the resulting reconstructions show scene content consistent with each ROI's known neuroscientific selectivity. (Fig. 9: individual ROIs; Fig. 10: ROI combinations; Fig. 11: eccentricity bands.)
 
 ## 7. How were each of these findings generated (method and outcome measure)
 
@@ -107,17 +114,27 @@ Neural decoding research aims to reconstruct what a person perceived from their 
 **Answer:**
 
 **Finding 1 (joint low-level+high-level reconstruction):**
-- Method: a two-stage pipeline. Stage 1 uses ridge regression from fMRI activity to VDVAE latent features, decoded into an initial low-level reconstruction. Stage 2 uses ridge regression from fMRI activity to CLIP-Vision and CLIP-Text features, which condition a diffusion model (Versatile Diffusion) that refines the stage-1 reconstruction into the final image.
+- Method: a two-stage model. Stage 1 uses ridge regression from fMRI activity to VDVAE latent features, decoded into an initial low-level reconstruction. Stage 2 uses ridge regression from fMRI activity to CLIP-Vision and CLIP-Text features, which condition a diffusion model (Versatile Diffusion) that refines the stage-1 reconstruction into the final image.
 - Outcome measure: qualitative visual comparison of reconstructions to ground-truth test images (Fig. 3); no statistical test.
 - Result: qualitative. The authors report reconstructions "preserve most of the layout and semantic information" though not pixel-perfect, with failure cases documented separately (Fig. 4).
 
 **Finding 2 (strong quantitative reconstruction quality):**
-- Method: same regression+reconstruction pipeline as Finding 1, evaluated by comparing each test-set reconstruction to its ground-truth image.
+- Method: same regression+reconstruction model as Finding 1, evaluated by comparing each test-set reconstruction to its ground-truth image.
 - Outcome measure: 8 point-estimate image-quality metrics (no significance testing), covering low-level similarity (pixel/structural correlation) and high-level similarity (identification accuracy across several pretrained vision/language networks).
 - Result (Table 1): PixCorr=0.254, SSIM=0.356, AlexNet(2)=94.2%, AlexNet(5)=96.2%, Inception=87.2%, CLIP=91.5%, EffNet-B=0.775, SwAV=0.423, the best (or tied-best) value among all compared models on every metric.
 
-**Finding 3 (ROI-optimal stimuli):**
-- Method: synthetic activation patterns for each ROI are constructed (without real fMRI data) and passed through the trained regression and reconstruction pipeline to generate images.
+**Finding 3 (component contributions established by ablation):**
+- Method: four ablated variants of the full model (Only-VDVAE, w/o VDVAE, w/o CLIP-Text, w/o CLIP-Vision), evaluated on Sub1's test set with the same procedure as Finding 2.
+- Outcome measure: the same 8 point-estimate metrics (Table 2), plus qualitative inspection of reconstructions (Fig. 7); no significance testing.
+- Result (Table 2): Only-VDVAE is best on low-level measures (PixCorr=0.358, SSIM=0.437) but worst on high-level ones (Inception=77.0%, CLIP=71.1%, EffNet-B=0.906, SwAV=0.581); w/o VDVAE is worst on low-level (PixCorr=0.143, SSIM=0.302) while among the best on high-level (Inception=87.3%, CLIP=92.6%); the full model (PixCorr=0.305, SSIM=0.367, Inception=87.8%, CLIP=92.5%, EffNet-B=0.768, SwAV=0.415) is the optimal compromise across both. Qualitatively, Only-VDVAE produces vague silhouettes and w/o VDVAE loses object layout.
+
+**Finding 4 (division of labour across brain regions):**
+- Method: for each voxel in 8 ROIs (V1-V4 from population receptive field mapping; Face, Word, Place and Body ROIs from functional localizers), the strength (L1 norm) of the ridge regression weights was computed for the CLIP and the VDVAE features and expressed as a percentile; results are reported as the CLIP-minus-VDVAE difference, to control for differences in ROI size, overall activity and noise level.
+- Outcome measure: difference in regression-weight percentile, averaged over voxels per ROI, with error bars showing the standard error of the mean across the 4 subjects (Fig. 8); no statistical test.
+- Result: descriptive. The difference is negative (VDVAE-weighted) for V1-V4 and positive (CLIP-weighted) for the category-selective ROIs, with the CLIP-Text contrast substantially larger than the CLIP-Vision contrast.
+
+**Finding 5 (ROI-optimal stimuli):**
+- Method: synthetic activation patterns for each ROI are constructed (without real fMRI data) and passed through the trained regression and reconstruction model to generate images.
 - Outcome measure: qualitative visual inspection of the resulting synthetic reconstructions, judged against each ROI's known functional selectivity; no statistical test.
 - Result: qualitative. Reconstructions are reported as "consistent with neuroscientific knowledge" (e.g. face-like content for the Face-ROI, scene/place content for the Place-ROI).
 
@@ -130,17 +147,21 @@ Neural decoding research aims to reconstruct what a person perceived from their 
 
 **Answer:**
 
-**Finding 1 (joint low-level+high-level reconstruction):** We will prepare LAION-fMRI data the same way NSD data was prepared (train/test split, excluding out-of-distribution images), run the same two-stage pipeline on LAION-fMRI's data, and compare reconstructions to ground truth qualitatively, as in the original study.
+**Finding 1 (joint low-level+high-level reconstruction):** We will prepare LAION-fMRI data the same way NSD data was prepared (train/test split, excluding out-of-distribution images), run the same two-stage model on LAION-fMRI's data, and compare reconstructions to ground truth qualitatively, as in the original study.
 
-**Finding 2 (strong quantitative reconstruction quality):** We will evaluate Finding 1's reconstructions using the same quantitative metrics, reported per subject (LAION-fMRI has 5 subjects), and test whether quality is above chance using subject-level permutation tests (see §9), since the original study reported no significance test.
+**Finding 2 (strong quantitative reconstruction quality):** We will evaluate Finding 1's reconstructions using the same quantitative metrics, reported per subject (LAION-fMRI has 5 subjects), and compare them against the values the original study reports for NSD, asking whether Brain-Diffuser trained on LAION-fMRI reaches comparable metric values (see 9.).
 
-**Finding 3 (ROI-optimal stimuli):** We will include this finding using LAION-fMRI's own ROI definitions, qualitatively assessing whether reconstructions match known functional selectivity, as in the original study. The original code has a disclosed bug limiting precision for most ROIs; we will attempt to fix it before running this finding.
+**Finding 3 (component contributions established by ablation):** We will run the same four ablation variants on LAION-fMRI, per subject, and compute the same eight metrics for each, testing whether the ordinal pattern across variants is preserved. These variants are internal to Brain-Diffuser and require no external models, so this comparison transfers in full.
 
-**New metadata needed:** None. LAION-fMRI already provides everything the pipeline requires: images, captions, and ROI definitions.
+**Finding 4 (division of labour across brain regions):** We will recompute the regression-weight percentile analysis from our LAION-fMRI-trained regressions, using the dataset's own retinotopically defined early visual ROIs and its category-selective localizer ROIs, and test whether the same early-versus-higher division holds, following the original analysis exactly.
+
+**Finding 5 (ROI-optimal stimuli):** We will include this finding using LAION-fMRI's own ROI definitions, qualitatively assessing whether reconstructions match known functional selectivity, as in the original study. The original code has a disclosed bug limiting precision for most ROIs; we will attempt to fix it before running this finding.
+
+**New metadata needed:** None. LAION-fMRI already provides everything the model requires: images, captions, ROI definitions, retinotopy and functional localizers.
 
 **Metadata approximable via DNNs:** Not applicable.
 
-**Results we cannot replicate using LAION-fMRI:** The comparison against three other reconstruction models (Finding 2) cannot be replicated, as explained in §6; we instead compare against the original study's own reported performance.
+**Results we cannot replicate using LAION-fMRI:** The comparison against three other reconstruction models (Finding 2) will not be replicated, as explained in 6.; we instead compare against the original study's own reported performance.
 
 ## 9. Statistics
 
@@ -153,9 +174,13 @@ Neural decoding research aims to reconstruct what a person perceived from their 
 
 **Answer:**
 
-None of the three findings involved formal statistical testing in the original study (see §7). Per finding: Findings 1 and 3 are unchanged, since neither needs a test; Finding 2 gets an entirely new test, since none existed originally.
+None of the five findings involved formal statistical testing in the original study (see 7.): every result is either qualitative or a point estimate reported without variance estimates or significance tests. Following the instruction to stay as close as possible to the original study's approach, we do not introduce inferential tests that the original study did not perform. No finding therefore requires a change of statistical method, and no permutation scheme applies.
 
-For Finding 2, we add a subject-level permutation test to assess whether reconstructions are significantly more similar to their true stimuli than to non-corresponding stimuli, per subject. We permute which reconstruction is compared to which ground-truth image, rebuild each metric's null distribution from many random pairings, and compare the true pairing against it to obtain a p-value, correcting for multiple comparisons per subject.
+Findings 2 and 3: we report the same eight metrics descriptively, computed per subject on LAION-fMRI, and compare them directly against the values the original study reports on NSD in Tables 1 and 2. The replication criterion for Finding 2 is whether Brain-Diffuser trained on LAION-fMRI attains metric values comparable to those reported on NSD; for Finding 3, whether the ordinal pattern across the ablation variants is preserved (Only-VDVAE highest on low-level and lowest on high-level metrics, w/o VDVAE the inverse, full model best jointly). The four 2-way identification metrics have a defined chance level of 50%, which provides an interpretable floor. Absolute magnitudes are not strictly comparable across datasets, which differ in subjects, image distribution, field strength and trial counts.
+
+Finding 4: replicated exactly as in the original, with the regression-weight differences averaged over voxels per ROI and reported across subjects with standard-error bars as in Fig. 8. The comparison is the sign and the rank ordering of the CLIP-minus-VDVAE difference across ROIs.
+
+Findings 1 and 5 are qualitative in the original study and remain so here.
 
 ## 10. How to test generalization of these findings (required only for generalization)
 
@@ -167,8 +192,6 @@ For Finding 2, we add a subject-level permutation test to assess whether reconst
 
 **Answer:**
 
-We plan to attempt generalization for our main finding (Finding 2) if capacity allows, using re:vision's Method 1 (a broad-coverage train/test split for unseen images) and Method 2 (out-of-distribution image clusters). We will retrain on each split's training portion, evaluate on the held-out portion, and compare metrics and permutation-test results to our main replication. If time allows, we will additionally test Method 3, using LAION-fMRI's "shape," "unusual," and "cropped" out-of-distribution image categories; we include all three rather than a single category, since Finding 2 is a general reconstruction-quality metric not tied to any one visual property.
+We plan to attempt generalization for Finding 2, using re:vision's Method 1 (a broad-coverage train/test split for unseen images) and Method 2 (out-of-distribution image clusters). We will retrain on each split's training portion, evaluate on the held-out portion, and compare the resulting metrics to our main replication. We will additionally test Method 3, using LAION-fMRI's "shape," "unusual," and "cropped" out-of-distribution image categories; we include all three rather than a single category, since Finding 2 is a general reconstruction-quality metric not tied to any one visual property.
 
-Findings 1 and 3 are qualitative and would only be generalized informally (visual inspection of held-out reconstructions), lower priority if capacity is limited. Finding 3 does not use a held-out image split at all, since it relies on synthetic activation patterns rather than real image trials, so Methods 1 and 2 do not directly apply there.
-
-This generalization analysis is optional, dependent on time available after the core replication; if capacity does not allow it, we will submit the replication (§6-§9) without it.
+Finding 1 will be generalized using the same procedure, and assessed qualitatively (cf. 7.). Findings 3 and 4 will not be generalized, to keep the computational cost manageable, as the template permits limiting generalization to the main finding. Finding 5 does not use a held-out image split, so generalisation is not applicable.
