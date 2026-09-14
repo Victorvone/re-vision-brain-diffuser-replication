@@ -268,8 +268,10 @@ the limit is better than implying it is airtight.
 
 ## 8. Proposal disclosure text (canonical wording)
 
-This is the paragraph as it stands in `proposal_draft.md` section 8. Keep the two copies in sync;
-this file is the canonical source if they drift.
+Reproduced verbatim from section 8 of `re-vision-proposal-brain-diffuser.docx`, which is now the
+source of truth for the proposal (authored in Word). Three copy-editing slips are still present in
+that document and should be fixed there: "; We aim" (capital after a semicolon), "the LAION-fMRI's
+THINGS" (spurious article), and "Furthermore, The original" (capital mid-sentence).
 
 > **Potential confound:** VD is used frozen and was pretrained on LAION-2B, and LAION-fMRI's natural
 > images were drawn from a curated 120M subset of that same corpus. This is not classical test-set
@@ -279,11 +281,11 @@ this file is the canonical source if they drift.
 > better match the generative prior to the stimulus distribution, which may inflate absolute values
 > relative to NSD. We know of no openly available diffusion model combining VD's joint CLIP-Vision
 > and CLIP-Text conditioning with non-LAION pretraining, so substituting the generative model is not
-> an option; two internal controls bound the effect instead: the Only-VDVAE ablation, whose ImageNet
-> prior is equally unmatched to both datasets, and evaluation restricted to LAION-fMRI's THINGS and
-> MS-COCO stimuli, which are not LAION-derived. The original study faces a weaker version of the same
-> issue, since MS-COCO images are widely reposted and some are likely present in LAION-2B, though we
-> know of no published estimate of how many.
+> an option; We aim to assess the effect via two internal controls instead: the Only-VDVAE ablation,
+> whose ImageNet prior is equally unmatched to both datasets, and evaluations based on the LAION-
+> fMRI's THINGS and MS-COCO stimuli, which are not LAION-derived. Furthermore, The original study
+> likely faces a weaker version of the same confound, since MS-COCO images are widely reposted and
+> some are likely present in LAION-2B, though we know of no published estimate of how many.
 
 Two points deliberately left out of the proposal for length, but worth making in the report: the
 Only-VDVAE control estimates the effect whereas the non-LAION-subset control is confounded by
