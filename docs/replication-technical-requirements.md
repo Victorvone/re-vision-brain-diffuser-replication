@@ -62,6 +62,13 @@ net.load_state_dict(sd, strict=False)
 ```
 This needed two supporting changes: (1) `accelerate` added to `ml-env` (`pip install accelerate`) - without it, transformers' `CLIPModel.from_pretrained` (called internally during construction) refuses to run under an ambient `torch.device` context; (2) a one-line patch to `versatile_diffusion/lib/model_zoo/diffusion_utils.py`'s `make_beta_schedule`, forcing its tiny internal beta-schedule computation onto CPU regardless of ambient device context (it needs a real `.numpy()` call a CUDA tensor can't service). With both in place, peak cgroup RAM measured flat at ~13.6GB through construction, `.half()`, and checkpoint load - a much safer margin than either prior approach. **Now ported into all three scripts** (`smoke_test_versatile_diffusion.py`, `versatilediffusion_reconstruct_images.py`, `roi_versatilediffusion_reconstruct.py`), and the single-GPU consolidation (`.cuda(1)` → single `DEVICE` variable) was folded into the same edit. The smoke test was re-run end-to-end after these changes and still passes (real checkpoint load + full DDIM sampling).
 
+
+**Pretraining-corpus confound (raised 2026-09-11):** Versatile Diffusion was trained on
+Laion2B-en (`versatile_diffusion/README.md:53`), the corpus 87% of LAION-fMRI stimuli are drawn
+from. This has no bearing on the OOM/device work above, but it does bear on how stage-2 results
+are interpreted. Full analysis, impact estimate and control options in
+`laion-pretraining-confound.md`.
+
 ## 4. Evaluation - one NSD-specific constant to re-derive
 
 `eval_extract_features.py` (extracts Inception-v3/CLIP/AlexNet×2/EfficientNet-b1/SwAV-ResNet50 features from ground-truth and reconstructed images) and `evaluate_reconstruction.py` (computes PixCorr, SSIM, 2-way identification accuracy).

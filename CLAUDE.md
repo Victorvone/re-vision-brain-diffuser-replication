@@ -94,6 +94,9 @@ end-to-end (real checkpoint load + full DDIM sampling pass).
   this updated as decisions are made; don't let it drift from what's actually been done.
 - `docs/replication-task-overview.md` - the full checklist from here to final submission. Status
   source of truth.
+- `docs/laion-pretraining-confound.md` - analysis of the Versatile Diffusion / LAION pretraining
+  overlap: the problem, impact estimate per finding, and controls in cost order (including the
+  alternative-diffusion-model option). Internal; the proposal carries only a short disclosure.
 - `docs/proposal_draft.md` - the proposal itself, filled in section by section, word-limited
   (~1,300 words).
 - `docs/re-vision-initiative-context.md` - crawled reference for re:vision's site rules,
